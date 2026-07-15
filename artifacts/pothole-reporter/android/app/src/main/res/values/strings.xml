@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Road Damage Reporter</string>
+    <string name="title_activity_main">Road Damage Reporter</string>
+    <string name="package_name">com.roaddamagereporter.app</string>
+    <string name="custom_url_scheme">com.roaddamagereporter.app</string>
+</resources>
