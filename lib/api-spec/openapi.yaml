@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Road Damage Reporter API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: reports
+    description: Road damage report operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,109 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List all road damage reports
+      parameters:
+        - name: damageType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: severity
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+    post:
+      operationId: createReport
+      tags: [reports]
+      summary: Submit a new road damage report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportInput"
+      responses:
+        "201":
+          description: Created report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "400":
+          description: Bad request
+
+  /reports/stats:
+    get:
+      operationId: getReportStats
+      tags: [reports]
+      summary: Get aggregate stats on reports
+      responses:
+        "200":
+          description: Report stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportStats"
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get a single report by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A single report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteReport
+      tags: [reports]
+      summary: Delete a report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +139,99 @@ components:
       required:
         - status
 
+    Report:
+      type: object
+      required:
+        - id
+        - damageType
+        - severity
+        - latitude
+        - longitude
+        - createdAt
+        - status
+      properties:
+        id:
+          type: integer
+        damageType:
+          type: string
+          description: "pothole, crack, subsidence, flooding, debris, other"
+        severity:
+          type: string
+          description: "low, medium, high, critical"
+        description:
+          type: ["string", "null"]
+        latitude:
+          type: number
+        longitude:
+          type: number
+        address:
+          type: ["string", "null"]
+        photoBase64:
+          type: ["string", "null"]
+        status:
+          type: string
+          description: "pending, in_review, resolved"
+        createdAt:
+          type: string
+          format: date-time
+
+    ReportInput:
+      type: object
+      required:
+        - damageType
+        - severity
+        - latitude
+        - longitude
+      properties:
+        damageType:
+          type: string
+        severity:
+          type: string
+        description:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        address:
+          type: string
+        photoBase64:
+          type: string
+
+    ReportStats:
+      type: object
+      required:
+        - total
+        - byType
+        - bySeverity
+        - byStatus
+        - recentCount
+      properties:
+        total:
+          type: integer
+        recentCount:
+          type: integer
+          description: Reports submitted in the last 7 days
+        byType:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountByKey"
+        bySeverity:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountByKey"
+        byStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountByKey"
+
+    CountByKey:
+      type: object
+      required:
+        - key
+        - count
+      properties:
+        key:
+          type: string
+        count:
+          type: integer
