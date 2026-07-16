@@ -1,8 +1,37 @@
 import { createRoot } from 'react-dom/client';
+import { Component, type ReactNode } from 'react';
 import { setBaseUrl } from '@workspace/api-client-react';
 
 import App from './App';
 import './index.css';
+
+// Top-level error boundary: catches render errors and shows a readable
+// message instead of a blank white screen.
+class AppErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      const err = this.state.error as Error;
+      return (
+        <div style={{ padding: 24, fontFamily: 'sans-serif', color: '#b91c1c' }}>
+          <h2>Something went wrong</h2>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 13 }}>
+            {err.message}
+            {'\n'}
+            {err.stack}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // When built for Android with Capacitor the app is served from a local WebView
 // origin (capacitor://localhost), so relative /api/* paths won't resolve to
@@ -19,4 +48,8 @@ if (apiBaseUrl) {
   setBaseUrl(apiBaseUrl);
 }
 
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(
+  <AppErrorBoundary>
+    <App />
+  </AppErrorBoundary>,
+);
