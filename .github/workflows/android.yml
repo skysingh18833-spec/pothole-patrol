@@ -22,30 +22,34 @@ jobs:
         with:
           java-version: "17"
           distribution: temurin
-          # Caches ~/.gradle/caches and ~/.gradle/wrapper between runs
           cache: gradle
 
-      # ── Android SDK: install platform 36 + matching build tools ─────────────
-      # ubuntu-latest ships the SDK Manager; we install the exact platform and
+      # ── Android SDK ─────────────────────────────────────────────────────────
+      # Accept all SDK licenses first, then install the exact platform +
       # build-tools versions declared in variables.gradle (compileSdk = 36).
       - name: Install Android SDK components
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
             "platforms;android-36" \
-            "build-tools;36.0.0" \
-          || true   # sdkmanager exits non-zero after printing license prompts; ignore it
+            "build-tools;36.0.0"
+
+      # ── Write local.properties ───────────────────────────────────────────────
+      # This file is git-ignored but Gradle requires it to locate the Android SDK.
+      - name: Generate local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > artifacts/pothole-reporter/android/local.properties
 
       # ── Node + pnpm ──────────────────────────────────────────────────────────
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10  # matches workspace pnpm version
+          version: 10
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: pnpm   # caches the pnpm content-addressable store
+          cache: pnpm
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
@@ -53,19 +57,16 @@ jobs:
       # ── Web build ────────────────────────────────────────────────────────────
       # VITE_API_BASE_URL must be set in GitHub → Settings → Secrets so that
       # API calls inside the APK resolve to the deployed server.
-      # If the secret is absent the app still builds; only API calls will fail
-      # at runtime (useful for UI smoke tests without a live backend).
       - name: Build web app
         working-directory: artifacts/pothole-reporter
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           BASE_PATH: /
           PORT: "3000"
+          NODE_ENV: production
         run: pnpm run build
 
       # ── Capacitor sync ───────────────────────────────────────────────────────
-      # Copies dist/public into android/app/src/main/assets/public and
-      # writes capacitor.config.json into the assets folder.
       - name: Capacitor sync
         working-directory: artifacts/pothole-reporter
         run: npx cap sync android
@@ -76,8 +77,6 @@ jobs:
 
       - name: Build debug APK
         working-directory: artifacts/pothole-reporter/android
-        # --no-daemon avoids leaving a background process in the ephemeral runner.
-        # --stacktrace surfaces the root cause of any build failure.
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       # ── Upload artifact ───────────────────────────────────────────────────────
