@@ -57,13 +57,13 @@ export default function Home() {
               />
               <StatCard
                 title="Pending"
-                value={stats.byStatus.find(s => s.key === 'pending')?.count || 0}
+                value={stats.byStatus?.find(s => s.key === 'pending')?.count || 0}
                 icon={Clock}
                 index={2}
               />
               <StatCard
                 title="Resolved"
-                value={stats.byStatus.find(s => s.key === 'resolved')?.count || 0}
+                value={stats.byStatus?.find(s => s.key === 'resolved')?.count || 0}
                 icon={CheckCircle2}
                 index={3}
               />
